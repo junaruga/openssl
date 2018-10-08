@@ -1,1 +1,1 @@
-FROM zzak/ruby-openssl-docker:testing
+FROM junaruga/ruby-openssl-docker:testing
