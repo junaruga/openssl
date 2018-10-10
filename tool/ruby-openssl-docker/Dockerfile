@@ -8,7 +8,8 @@ ENV LIBRESSL_VERSIONS 2.3.10 2.4.5 2.5.5 2.6.5 2.7.4
 # Supported Ruby versions: 2.3-
 ENV RUBY_VERSIONS 2.3.7 2.4.4 2.5.1
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update -qq && \
+  apt-get install -y --no-install-recommends -qq \
   autoconf \
   bison \
   build-essential \
@@ -16,53 +17,58 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   curl \
   gzip \
   libreadline-dev \
+  parallel \
   patch \
   pkg-config \
   sed \
   zlib1g-dev
 
 RUN mkdir -p /build/openssl
-RUN for version in ${OPENSSL10_VERSIONS}; do \
-      version_dir=$(echo "${version}" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+).*$/\1/') && \
+RUN parallel -j$(nproc) ' \
+      version="{}" && \
+      version_dir=$(echo "${version}" | sed -E "s/^([0-9]+\.[0-9]+\.[0-9]+).*$/\1/") && \
       curl -s https://www.openssl.org/source/openssl-${version}.tar.gz | tar -C /build/openssl -xzf - && \
       cd /build/openssl/openssl-${version} && \
       ./Configure \
         --openssldir=/opt/openssl/openssl-${version_dir} \
         shared linux-x86_64 && \
-      make && make install_sw; \
-    done
+      make -s && make install_sw \
+    ' ::: ${OPENSSL10_VERSIONS}
 
-RUN for version in ${OPENSSL11_VERSIONS}; do \
-      version_dir=$(echo "${version}" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+).*$/\1/') && \
+RUN parallel -j$(nproc) ' \
+      version="{}" && \
+      version_dir=$(echo "${version}" | sed -E "s/^([0-9]+\.[0-9]+\.[0-9]+).*$/\1/") && \
       curl -s https://www.openssl.org/source/openssl-${version}.tar.gz | tar -C /build/openssl -xzf - && \
       cd /build/openssl/openssl-${version} && \
       ./Configure \
         --prefix=/opt/openssl/openssl-${version_dir} \
         enable-crypto-mdebug enable-crypto-mdebug-backtrace \
         linux-x86_64 && \
-      make && make install_sw; \
-    done
+      make -s && make install_sw \
+    ' ::: ${OPENSSL11_VERSIONS}
 
-RUN for version in ${LIBRESSL_VERSIONS}; do \
-      version_dir=$(echo "${version}" | sed -E 's/^([0-9]+\.[0-9]+).*$/\1/') && \
+RUN parallel -j$(nproc) ' \
+      version="{}" && \
+      version_dir=$(echo "${version}" | sed -E "s/^([0-9]+\.[0-9]+).*$/\1/") && \
       curl -s http://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-${version}.tar.gz | tar -C /build/openssl -xzf - && \
       cd /build/openssl/libressl-${version} && \
       ./configure \
         --prefix=/opt/openssl/libressl-${version_dir} && \
-      make && make install; \
-    done
+      make -s && make install \
+    ' ::: ${LIBRESSL_VERSIONS}
 
 RUN mkdir -p /build/ruby
-RUN for version in ${RUBY_VERSIONS}; do \
-      version_dir=$(echo "${version}" | sed -E 's/^([0-9]+\.[0-9]+).*$/\1/') && \
+RUN parallel -j$(nproc) ' \
+      version="{}" && \
+      version_dir=$(echo "${version}" | sed -E "s/^([0-9]+\.[0-9]+).*$/\1/") && \
       curl -s https://cache.ruby-lang.org/pub/ruby/${version_dir}/ruby-${version}.tar.gz | tar -C /build/ruby -xzf - && \
       cd /build/ruby/ruby-${version} && \
       autoconf && ./configure \
         --without-openssl \
         --prefix=/opt/ruby/ruby-${version_dir} \
         --disable-install-doc && \
-      make && make install; \
-    done
+      make -s && make install \
+    ' ::: ${RUBY_VERSIONS}
 
 ONBUILD ADD . /home/openssl/code
 ONBUILD WORKDIR /home/openssl/code
