@@ -8,7 +8,8 @@ ENV LIBRESSL_VERSIONS 2.3.10 2.4.5 2.5.5 2.6.5 2.7.4
 # Supported Ruby versions: 2.3-
 ENV RUBY_VERSIONS 2.3.7 2.4.4 2.5.1
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update -qq && \
+  apt-get install -y --no-install-recommends -qq \
   autoconf \
   bison \
   build-essential \
@@ -29,7 +30,7 @@ RUN for version in ${OPENSSL10_VERSIONS}; do \
       ./Configure \
         --openssldir=/opt/openssl/openssl-${version_dir} \
         shared linux-x86_64 && \
-      make && make install_sw; \
+      make -s -j$(nproc) && make install_sw; \
     done
 
 RUN for version in ${OPENSSL11_VERSIONS}; do \
@@ -40,7 +41,7 @@ RUN for version in ${OPENSSL11_VERSIONS}; do \
         --prefix=/opt/openssl/openssl-${version_dir} \
         enable-crypto-mdebug enable-crypto-mdebug-backtrace \
         linux-x86_64 && \
-      make && make install_sw; \
+      make -s -j$(nproc) && make install_sw; \
     done
 
 RUN for version in ${LIBRESSL_VERSIONS}; do \
@@ -49,7 +50,7 @@ RUN for version in ${LIBRESSL_VERSIONS}; do \
       cd /build/openssl/libressl-${version} && \
       ./configure \
         --prefix=/opt/openssl/libressl-${version_dir} && \
-      make && make install; \
+      make -s -j$(nproc) && make install; \
     done
 
 RUN mkdir -p /build/ruby
@@ -61,7 +62,7 @@ RUN for version in ${RUBY_VERSIONS}; do \
         --without-openssl \
         --prefix=/opt/ruby/ruby-${version_dir} \
         --disable-install-doc && \
-      make && make install; \
+      make -s -j$(nproc) && make install; \
     done
 
 ONBUILD ADD . /home/openssl/code
