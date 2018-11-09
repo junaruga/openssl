@@ -47,7 +47,8 @@ matrix:
   include:
     - name: push ruby-openssl-docker image for testing
       stage: deploy
-      if: (env(DOCKER_USER) IS present) AND (env(DOCKER_PASSWORD) IS present) AND (type = push) AND (branch = master)
+      # if: (env(DOCKER_USER) IS present) AND (env(DOCKER_PASSWORD) IS present) AND (type = push) AND (branch = master)
+      if: (env(DOCKER_USER) IS present) AND (env(DOCKER_PASSWORD) IS present) AND (type = push)
       script:
         - |
           if [ "${BUILD_RUBY_OPENSSL_DOCKER}" = true ]; then
